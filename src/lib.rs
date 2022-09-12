@@ -78,7 +78,10 @@
 extern crate futures;
 extern crate hyper;
 
-use futures::future::FutureResult;
+use std::future::Future;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+
 use hyper::header::CONTENT_LENGTH;
 use hyper::service::Service;
 use hyper::{Body, Request, Response};
@@ -183,16 +186,29 @@ impl RouterService {
     }
 }
 
-impl Service for RouterService {
-    type ReqBody = Body;
-    type ResBody = Body;
+impl Service<Request<Body>> for RouterService {
+    type Response = Response<Body>;
     type Error = hyper::Error;
-    type Future = FutureResult<Response<Body>, hyper::Error>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
-    fn call(&mut self, request: Request<Self::ReqBody>) -> Self::Future {
-        futures::future::ok(match self.router.find_handler(&request) {
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        todo!()
+    }
+
+    fn call(&mut self, request: Request<Body>) -> Self::Future {
+        let response = Response::builder().body("");
+
+        let result = match self.router.find_handler(&request) {
             Ok(handler) => handler(request),
-            Err(status_code) => (self.error_handler)(status_code),
-        })
+            Err(status_code) => (self.error_handler)(status_code)
+        };
+
+        // create a response in a future.
+        let fut = async {
+            Ok(result)
+        };
+
+        Box::pin(fut)
+
     }
 }
