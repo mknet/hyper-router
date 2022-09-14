@@ -19,5 +19,8 @@ path = "src/lib.rs"
 
 [dependencies]
 futures = "^0.1"
-hyper = "^0.14"
+hyper = { version="^0.14", features = ["server", "runtime", "tcp", "http1", "http2"] }
+log = "0.4.17"
 regex = "^0.2"
+tokio = { version="1.21.0" , features = ["full"] }
+
